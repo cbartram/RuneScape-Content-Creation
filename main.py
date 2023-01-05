@@ -5,22 +5,24 @@ import smtplib
 import pandas as pd
 import requests as r
 from logger import log
-from datetime import date
+from datetime import date, datetime, timezone
 
 
-def fetch_reddit_posts(between: tuple = ()) -> int:
+def fetch_reddit_posts(single_day: bool = True) -> int:
     """
     Fetches a series of Reddit posts for OldSchool RuneScape, processes them and writes them to files for
     future analysis.
-    :param: between Tuple Between accepts 2 values in the tuple as unix epoch timestamps in UTC to
-     filter reddit posts that are fetched between a specific start and end time
+    :param: single_day Boolean option to only pull data for a single day (based on the time this is running)
     :return:
     """
     today = date.today().strftime('%Y-%m-%d')
     log.info(f'---------------------- {today} ----------------------------')
     log.info("Attempting to fetch Reddit Posts from api.pushshift.io")
     try:
-        res = r.get('https://api.pushshift.io/reddit/search/submission?size=500&subreddit=2007scape')
+        before_utc = int((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds())
+        after = before_utc - 86200
+        single_day_option = "" if not single_day else f"&before={before_utc}&after={after}"
+        res = r.get(f'https://api.pushshift.io/reddit/search/submission?size=500&subreddit=2007scape{single_day_option}')
         res.raise_for_status()
         data = res.json()
     except r.exceptions.HTTPError as errh:
