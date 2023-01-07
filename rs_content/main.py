@@ -74,7 +74,7 @@ def fetch_reddit_posts(single_day: bool = True) -> int:
 
         log.info(f"Writing posts to file(s): {list(grouped_reddit_posts.keys())}")
         for k in grouped_reddit_posts.keys():
-            file_path = os.path.join(os.getcwd(), 'data', f'osrs_reddit_{k}.json')
+            file_path = os.path.join(os.getcwd(), '../data', f'osrs_reddit_{k}.json')
             with open(file_path, 'w') as f:
                 f.write(grouped_reddit_posts[k])
             upload_file_s3(file_path, 'runescape-content-prod')

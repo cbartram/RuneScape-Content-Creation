@@ -1,0 +1,2 @@
+# The Primary version for this application
+__version__ = "0.0.1"
