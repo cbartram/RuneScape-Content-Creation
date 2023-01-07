@@ -1,11 +1,13 @@
 import os
 import time
 import json
+import boto3
 import smtplib
 import pandas as pd
 import requests as r
 from logger import log
-from datetime import date, datetime, timezone
+from datetime import date, datetime
+from botocore.exceptions import ClientError
 
 
 def fetch_reddit_posts(single_day: bool = True) -> int:
@@ -17,6 +19,7 @@ def fetch_reddit_posts(single_day: bool = True) -> int:
     """
     today = date.today().strftime('%Y-%m-%d')
     log.info(f'---------------------- {today} ----------------------------')
+    log.info(f"Running job at: {datetime.today().strftime('%Y-%m-%d %I:%M %p')}")
     log.info("Attempting to fetch Reddit Posts from api.pushshift.io")
     try:
         before_utc = int((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds())
@@ -74,6 +77,7 @@ def fetch_reddit_posts(single_day: bool = True) -> int:
             file_path = os.path.join(os.getcwd(), 'data', f'osrs_reddit_{k}.json')
             with open(file_path, 'w') as f:
                 f.write(grouped_reddit_posts[k])
+            upload_file_s3(file_path, 'runescape-content-prod')
 
         log.info('Done.')
         return 0
@@ -110,6 +114,31 @@ def send_email():
             server.sendmail(sender, receiver, message)
             log.info('Email sent.')
     log_file.close()
+
+
+def upload_file_s3(file_name, bucket, object_name=None):
+    """Upload a file to an S3 bucket
+
+    :param file_name: File to upload
+    :param bucket: Bucket to upload to
+    :param object_name: S3 object name. If not specified then file_name is used
+    :return: True if file was uploaded, else False
+    """
+
+    # If S3 object_name was not specified, use file_name
+    if object_name is None:
+        object_name = os.path.basename(file_name)
+
+    # Upload the file
+    s3_client = boto3.client('s3')
+    try:
+        response = s3_client.upload_file(file_name, bucket, object_name)
+        log.info(f'File successfully uploaded to: s3://{bucket}/{object_name}')
+        log.debug(response)
+    except ClientError as e:
+        log.error(e)
+        return False
+    return True
 
 
 def run():
