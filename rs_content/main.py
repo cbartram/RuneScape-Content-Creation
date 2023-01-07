@@ -153,6 +153,7 @@ if __name__ == '__main__':
     # run()
 
 
-    from rs_content.preprocess import load_from_s3, run
-    load_from_s3('runescape-content-prod')
-    # run()
+    from rs_content.preprocess import load_data_from_s3, clean_data
+    data = load_data_from_s3('runescape-content-prod')
+    cleaned = clean_data(data)
+    print(cleaned)

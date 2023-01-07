@@ -1,10 +1,16 @@
+import re
 import json
 import boto3
 import numpy as np
 from sklearn.datasets import fetch_20newsgroups
 
 
-def load_from_s3(bucket: str):
+def load_data_from_s3(bucket: str):
+    """
+    Reads all data files in the root of an S3 bucket and returns the text as a new line delimited string
+    :param bucket: String the S3 bucket to read data from
+    :return: String representing both the titles and content of each individual reddit post
+    """
     data = ""
     # Content in a reddit post which should be removed from analysis and clustering.
     # Things like [removed], &amp;#x200B;, URL's, blank strings, etc... TODO this may make for a good configuration parameter later on.
@@ -25,37 +31,44 @@ def load_from_s3(bucket: str):
         contents = r['Body'].read()
         reddit_posts = json.loads(contents.decode("utf-8"))
         for reddit_post in reddit_posts:
-            data += reddit_post['title']
-            print(reddit_post['content'] + "\n")
+            data += reddit_post['title'] + "\n"
             if reddit_post['content'] not in omitted_content and len(reddit_post['content']) > 0:
-                pass
+                data += reddit_post['content'] + "\n"
+    return data
 
 
-
-
-
-def run():
-    categories = [
-        "alt.atheism",
-        "talk.religion.misc",
-        "comp.graphics",
-        "sci.space",
+def clean_data(data: str) -> str:
+    cleaned = ""
+    regexes = [
+        r"\[.+?\]\(.+?\)", #Markdown links
+        r"((?<=[^a-zA-Z0-9])(?:https?\:\/\/|[a-zA-Z0-9]{1,}\.{1}|\b)(?:\w{1,}\.{1}){1,5}(?:"
+                                    "com|org|edu|gov|uk|net|ca|de|jp|fr|au|us|ru|ch|it|nl|se|no|es|mil|iq|io|ac|ly|sm)"
+                                    "{1}(?:\/[a-zA-Z0-9]{1,})*)", # URL's
+        r"&amp;#x200B;{1,}",
+        r"&amp;{1,}",
+        r"\\-",
+        r"\*\*",
+        r"\*",
+        r"\/",
+        r"&gt;"
     ]
+    for line in data.split("\n"):
+        if len(line) > 0:
+            # Match markdown URL's and standard URL's
+            for regex in regexes:
+                m = re.finditer(regex, line, re.MULTILINE)
+                for matchNum, match in enumerate(m, start=1):
+                    # TODO Doesnt work for 2 links on the same line i.e "hey [how](are) you doing [today](okay)."
+                    line = line[0:match.start()] + line[match.end()::]
+                    # After trimming out the URL from the content sometimes the content is now blank so omit it
+                    if len(line.strip()) == 0:
+                        continue
 
-    dataset = fetch_20newsgroups(
-        remove=("headers", "footers", "quotes"),
-        subset="all",
-        categories=categories,
-        shuffle=True,
-        random_state=42,
-    )
-    print(dataset)
-
-    labels = dataset.target
-    print("Target labels: ", dataset.target)
-    unique_labels, category_sizes = np.unique(labels, return_counts=True)
-    print("Unique labels and cat sizes: ", unique_labels, category_sizes)
-    true_k = unique_labels.shape[0]
-
-    print(f"{len(dataset.data)} documents - {true_k} categories")
+            # There is a specific instance of url's which look like https://.png?.... which need to be manually parsed
+            # as the regex doesn't catch them. The line can just be deleted since i've only seen instances where its
+            # the url as the only content in the line
+            if "https://.png?" in line:
+                continue
+        cleaned += line + "\n"
+    return cleaned
 
