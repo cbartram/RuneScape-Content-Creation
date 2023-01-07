@@ -70,6 +70,6 @@ def clean_data(data: str) -> str:
             # the url as the only content in the line
             if "https://.png?" in line or "https:/png?" in line or "https:/jpg?" in line:
                 continue
-        cleaned += line + "\n"
-    return cleaned
+        cleaned += line.strip() + "\n"
+    return "\n".join(list(filter(lambda l: len(l) > 0, cleaned.split("\n"))))
 
