@@ -68,7 +68,7 @@ def clean_data(data: str) -> str:
             # There is a specific instance of url's which look like https://.png?.... which need to be manually parsed
             # as the regex doesn't catch them. The line can just be deleted since i've only seen instances where its
             # the url as the only content in the line
-            if "https://.png?" in line:
+            if "https://.png?" in line or "https:/png?" in line or "https:/jpg?" in line:
                 continue
         cleaned += line + "\n"
     return cleaned
