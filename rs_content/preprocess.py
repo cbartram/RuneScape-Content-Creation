@@ -50,7 +50,8 @@ def clean_data(data: str) -> str:
         r"\*\*",
         r"\*",
         r"\/",
-        r"&gt;"
+        r"&gt;{1,}",
+        r"TL;DR{1,}"
     ]
     for line in data.split("\n"):
         if len(line) > 0:
