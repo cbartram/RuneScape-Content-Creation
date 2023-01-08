@@ -155,20 +155,8 @@ def run():
 
 if __name__ == '__main__':
     # run()
-    from rs_content.cluster import vectorize_text, k_means_cluster, fit_and_evaluate
+    from rs_content.cluster import cluster_data
     from rs_content.preprocess import load_data_from_s3, clean_data
     data = load_data_from_s3('runescape-content-prod')
     cleaned = clean_data(data)
-    x, v = vectorize_text(cleaned)
-    k = k_means_cluster(vectors=x, true_k=5)
-    kmeans = fit_and_evaluate(k, x, name="KMeans\non tf-idf vectors")
-
-    original_space_centroids = kmeans.cluster_centers_
-    order_centroids = original_space_centroids.argsort()[:, ::-1]
-    terms = v.get_feature_names_out()
-
-    for i in range(5):
-        print(f"Cluster {i}: ", end="")
-        for ind in order_centroids[i, :10]:
-            print(f"{terms[ind]} ", end="")
-        print()
+    cluster_data(cleaned)
