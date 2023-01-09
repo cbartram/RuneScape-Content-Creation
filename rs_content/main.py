@@ -154,9 +154,11 @@ def run():
 
 
 if __name__ == '__main__':
-    # run()
+    run()
     from rs_content.cluster import cluster_data
-    from rs_content.preprocess import load_data_from_s3, clean_data
+    from rs_content.preprocess import load_data_from_s3, clean_data, remove_stop_words
     data = load_data_from_s3('runescape-content-prod')
     cleaned = clean_data(data)
-    cluster_data(cleaned)
+    cleaned = remove_stop_words(cleaned)
+    print(cleaned)
+    # cluster_data(cleaned)

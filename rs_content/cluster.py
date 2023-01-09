@@ -8,7 +8,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 evaluations = []
 evaluations_std = []
 
+
 def cluster_data(data: str, number_of_clusters: int = 10):
+    """
+    Runs the KMeans clustering algorithm on textual data to identify topics.
+    :param data:
+    :param number_of_clusters:
+    :return:
+    """
     vectorizer = TfidfVectorizer(
         max_df=0.5, # Ignore terms that appear in more than 50% of the documents
         min_df=5, # Ignore terms that are not present in at least 5 documents
@@ -23,9 +30,11 @@ def cluster_data(data: str, number_of_clusters: int = 10):
 
     for seed in range(5):
         kmeans = KMeans(
+            algorithm='lloyd',
             n_clusters=number_of_clusters,
             max_iter=100,
-            n_init=5,
+            init='k-means++',
+            n_init=1,
             random_state=seed,
         ).fit(X_tfidf)
 
@@ -35,8 +44,8 @@ def cluster_data(data: str, number_of_clusters: int = 10):
         name = kmeans.__class__.__name__
         train_times = []
         scores = defaultdict(list)
-        for seed in range(5):
-            kmeans.set_params(random_state=seed)
+        for s in range(5):
+            kmeans.set_params(random_state=s)
             t0 = time()
             kmeans.fit(X_tfidf)
             train_times.append(time() - t0)

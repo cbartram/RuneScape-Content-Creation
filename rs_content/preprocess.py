@@ -1,8 +1,13 @@
 import re
 import json
+import nltk
 import boto3
 import numpy as np
+from nltk.corpus import stopwords
 from sklearn.datasets import fetch_20newsgroups
+
+nltk.download('stopwords')
+nltk.download('punkt')
 
 
 def load_data_from_s3(bucket: str):
@@ -51,7 +56,8 @@ def clean_data(data: str) -> str:
         r"\*",
         r"\/",
         r"&gt;{1,}",
-        r"TL;DR{1,}"
+        r"TL;DR{1,}",
+        r"&gt;"
     ]
     for line in data.split("\n"):
         if len(line) > 0:
@@ -72,4 +78,17 @@ def clean_data(data: str) -> str:
                 continue
         cleaned += line.strip() + "\n"
     return "\n".join(list(filter(lambda l: len(l) > 0, cleaned.split("\n"))))
+
+
+def remove_stop_words(data: str):
+    stop_words = set(stopwords.words('english'))
+    cleaned_data = ""
+
+    for line in data.split('\n'):
+        words = nltk.word_tokenize(line)
+        print(words)
+        go_words = " ".join(list(filter(lambda w: w not in stop_words and w != '.', words)))
+        cleaned_data += go_words.strip() + "\n"
+    return cleaned_data
+
 
