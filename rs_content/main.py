@@ -13,6 +13,8 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
 
+S3_BUCKET = 'runescape-content-prod'
+
 
 def fetch_reddit_posts(single_day: bool = True) -> int:
     """
@@ -78,10 +80,25 @@ def fetch_reddit_posts(single_day: bool = True) -> int:
 
         log.info(f"Writing posts to file(s): {list(grouped_reddit_posts.keys())}")
         for k in grouped_reddit_posts.keys():
-            file_path = os.path.join(os.getcwd(), 'data', f'osrs_reddit_{k}.json')
+            file_name = f'osrs_reddit_{k}.json'
+            file_path = os.path.join(os.getcwd(), 'data', file_name)
             with open(file_path, 'w') as f:
                 f.write(grouped_reddit_posts[k])
-            upload_file_s3(file_path, 'runescape-content-prod')
+
+            # Before uploading to S3 verify that we have computed more data locally than currently exists on S3
+            # we don't want to accidently overwite data in S3 because we ran the code at a non-ideal time.
+            # i.e running at 8:00 pm on 01/05 would fetch data between 10:00pm-12:00am on the 4th and 12:01 am - 8:00pm
+            # on the 5th. This is great for the 5th's data but if we already ran on the 4th and S3 has the 4th's data
+            # from 9:00 am - 11:00 pm then we would end up overwriting the 4th's 14 hours of data with only 2 hours.
+            file_size_local = os.path.getsize(file_path) / 1024  # File size in KB (same as S3 computes)
+
+            # See if this file exists in S3
+            file_size_s3 = get_file_size(f'osrs_reddit_{k}.json', S3_BUCKET)
+
+            if file_size_local >= file_size_s3:
+                upload_file_s3(file_path, S3_BUCKET)
+            else:
+                log.warn(f'The local file is smaller than the S3 file. Aborting upload for: s3://{S3_BUCKET}/{file_name} since it would delete data.')
 
         log.info('Done.')
         return 0
@@ -145,6 +162,22 @@ def upload_file_s3(file_name, bucket, object_name=None):
     return True
 
 
+def get_file_size(file_name, bucket):
+    """
+    Returns the file size for an S3 object in Kilobytes
+    :param file_name:
+    :param bucket:
+    :return:
+    """
+    # TODO in the future create the s3 client once and pass it to both of these methods via a class
+    s3 = boto3.client('s3')
+    obj = s3.list_objects(Bucket=bucket, Prefix=file_name)
+    if len(obj['Contents']) == 0:
+        return 0
+    return obj['Contents'][0]['Size'] / 1024
+
+
+
 def run():
     """
     The Primary Entry point into the application
@@ -160,5 +193,5 @@ if __name__ == '__main__':
     data = load_data_from_s3('runescape-content-prod')
     cleaned = clean_data(data)
     cleaned = remove_stop_words(cleaned)
-    print(cleaned)
+    # print(cleaned)
     # cluster_data(cleaned)

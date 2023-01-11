@@ -10,6 +10,7 @@ boto3 = "*"
 scikit-learn = "*"
 numpy = "*"
 nltk = "*"
+botocore = "*"
 
 [dev-packages]
 pytest = "*"
