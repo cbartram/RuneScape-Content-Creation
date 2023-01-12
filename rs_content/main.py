@@ -86,7 +86,7 @@ def fetch_reddit_posts(single_day: bool = True) -> int:
                 f.write(grouped_reddit_posts[k])
 
             # Before uploading to S3 verify that we have computed more data locally than currently exists on S3
-            # we don't want to accidently overwite data in S3 because we ran the code at a non-ideal time.
+            # we don't want to accidentally overwite data in S3 because we ran the code at a non-ideal time.
             # i.e running at 8:00 pm on 01/05 would fetch data between 10:00pm-12:00am on the 4th and 12:01 am - 8:00pm
             # on the 5th. This is great for the 5th's data but if we already ran on the 4th and S3 has the 4th's data
             # from 9:00 am - 11:00 pm then we would end up overwriting the 4th's 14 hours of data with only 2 hours.
@@ -98,7 +98,7 @@ def fetch_reddit_posts(single_day: bool = True) -> int:
             if file_size_local >= file_size_s3:
                 upload_file_s3(file_path, S3_BUCKET)
             else:
-                log.warn(f'The local file is smaller than the S3 file. Aborting upload for: s3://{S3_BUCKET}/{file_name} since it would delete data.')
+                log.warning(f'The local file is smaller than the S3 file. Aborting upload for: s3://{S3_BUCKET}/{file_name} since it would delete data.')
 
         log.info('Done.')
         return 0
@@ -172,9 +172,11 @@ def get_file_size(file_name, bucket):
     # TODO in the future create the s3 client once and pass it to both of these methods via a class
     s3 = boto3.client('s3')
     obj = s3.list_objects(Bucket=bucket, Prefix=file_name)
-    if len(obj['Contents']) == 0:
-        return 0
-    return obj['Contents'][0]['Size'] / 1024
+    if 'Contents' in obj:
+        if len(obj['Contents']) == 0:
+            return 0
+        return obj['Contents'][0]['Size'] / 1024
+    return 0
 
 
 
@@ -188,10 +190,11 @@ def run():
 
 if __name__ == '__main__':
     run()
+
     from rs_content.cluster import cluster_data
     from rs_content.preprocess import load_data_from_s3, clean_data, remove_stop_words
-    data = load_data_from_s3('runescape-content-prod')
+    data = load_data_from_s3(bucket=S3_BUCKET)
     cleaned = clean_data(data)
     cleaned = remove_stop_words(cleaned)
-    # print(cleaned)
-    # cluster_data(cleaned)
+
+    cluster_data(cleaned)

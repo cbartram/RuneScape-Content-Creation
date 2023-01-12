@@ -2,6 +2,7 @@ import re
 import json
 import nltk
 import boto3
+import string
 import numpy as np
 from nltk.corpus import stopwords
 from sklearn.datasets import fetch_20newsgroups
@@ -81,14 +82,23 @@ def clean_data(data: str) -> str:
 
 
 def remove_stop_words(data: str):
+    """
+    Removes stop words from a sentence. Stop words include things like: he, she, it, etc... which do not add
+    to the context of the sentence.
+    :param data:
+    :return:
+    """
     stop_words = set(stopwords.words('english'))
     cleaned_data = ""
 
     for line in data.split('\n'):
-        words = nltk.word_tokenize(line)
-        print(words)
-        go_words = " ".join(list(filter(lambda w: w not in stop_words and w != '.', words)))
-        cleaned_data += go_words.strip() + "\n"
+        words = line.split(" ")
+
+        # Strip stop words
+        go_words = " ".join(list(filter(lambda w: w not in stop_words, words)))
+
+        # Strip Grammar like: , . ! and ? from words.
+        cleaned_data += go_words.strip().translate(str.maketrans('', '', string.punctuation)) + "\n"
     return cleaned_data
 
 
